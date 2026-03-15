@@ -4,14 +4,6 @@ This file lists the numerical methods that will be implemented in this repositor
 
 ## Numerical Differentiation
 
-### First Derivative
-
-* Forward difference
-* Backward difference
-* Central difference
-
-### Second Derivative
-
-* Forward difference
-* Backward difference
-* Central difference
+### Derivative
+[X] Simple derivative 
+[ ] Error handling derivative
