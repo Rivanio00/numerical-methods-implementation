@@ -1,11 +1,3 @@
-/******************************************************************************
-
-Welcome to GDB Online.
-  GDB online is an online compiler and debugger tool for C, C++, Python, PHP, Ruby, 
-  C#, OCaml, VB, Perl, Swift, Prolog, Javascript, Pascal, COBOL, HTML, CSS, JS
-  Code, Compile, Run and Debug online from anywhere in world.
-
-*******************************************************************************/
 #include <stdio.h>
 #include <iostream>
 #include <cmath>
@@ -13,75 +5,101 @@ Welcome to GDB Online.
 
 using namespace std;
 
-double fx(double x) 
+double f(double x);
+double forwardDifference(double x, double stepSize, int derivativeOrder);
+double backwardDifference(double x, double stepSize, int derivativeOrder);
+double centralDifference(double x, double stepSize, int derivativeOrder);
+
+double f(double x)
 {
     return pow(x, 4) + 2*pow(x, 3) - pow(x, 2) + 5*x + sin(x);
 }
 
-double forward(double x, double deltax, int ordem)
+double forwardDifference(double x, double stepSize, int derivativeOrder)
 {
-    if (ordem == 1)
+    if (derivativeOrder == 1)
     {
-        return (fx(x+deltax)-fx(x))/deltax;
+        return (f(x+stepSize)-f(x))/stepSize;
     }
-    return (forward(x+deltax, deltax, ordem-1) - forward(x, deltax, ordem-1))/deltax;
+    return (forwardDifference(x+stepSize, stepSize, derivativeOrder-1) - forwardDifference(x, stepSize, derivativeOrder-1))/stepSize;
 }
 
-double backward(double x, double deltax, int ordem)
+double backwardDifference(double x, double stepSize, int derivativeOrder)
 {
-    if (ordem == 1)
+    if (derivativeOrder == 1)
     {
-        return (fx(x)-fx(x-deltax))/deltax;
+        return (f(x)-f(x-stepSize))/stepSize;
     }
-    return (backward(x, deltax, ordem-1) - backward(x-deltax, deltax, ordem-1))/deltax;
+    return (backwardDifference(x, stepSize, derivativeOrder-1) - backwardDifference(x-stepSize, stepSize, derivativeOrder-1))/stepSize;
 }
 
-double central(double x, double deltax, int ordem)
+double centralDifference(double x, double stepSize, int derivativeOrder)
 {
-    if (ordem == 1)
+    if (derivativeOrder == 1)
     {
-        return (fx(x+deltax)-fx(x-deltax))/(2*deltax);
+        return (f(x+stepSize)-f(x-stepSize))/(2*stepSize);
     }
-    return (central(x+deltax, deltax, ordem-1) - central(x-deltax, deltax, ordem-1))/(2*deltax);
+    return (centralDifference(x+stepSize, stepSize, derivativeOrder-1) - centralDifference(x-stepSize, stepSize, derivativeOrder-1))/(2*stepSize);
 }
 
 int main()
 {
-    cout << fixed << setprecision(5);
-    int philosophy;
-    cout << "Bem-vindo! Antes de começarmos, por favor escolha a sua filosofia de orientação: " << endl;
-    cout << "(0) Forward; (1) Backward; (2) Central; (-1) Sair" << endl;
-    cin >> philosophy;
-    if (philosophy == -1) 
+    cout << fixed << setprecision(8);
+    int method;
+    cout << "Welcome! Please choose the differentiation method: " << endl;
+    cout << "0 - Forward Difference\n";
+    cout << "1 - Backward Difference\n";
+    cout << "2 - Central Difference\n";
+    cout << "-1 - Exit\n";
+    cin >> method;
+    if (method == -1) 
     {
         return 0;
     }
-    double x;
-    double deltaX;
-    int ordem;
-    cout << "Boa escolha! Qual X você gostaria de usar?" << endl;
-    cin >> x;
-    cout << "E qual será o delta x?" << endl;
-    cin >> deltaX;
-    cout << "Qual será a ordem da derivada?" << endl;
-    cin >> ordem;
-    cout << "Calculando..." << endl;
-    double result;
-    switch(philosophy)
+    if (method < 0 || method > 2)
     {
-        case 0: 
-            result = forward(x, deltaX, ordem);
-            break;
-        case 1: 
-            result = backward(x, deltaX, ordem);
-            break;
-        case 2:
-            result = central(x, deltaX, ordem);
-            break;
-        default:
-            result = -1;
-            break; 
+        cout << "Invalid method selected." << endl;
+        return 1;
     }
-    cout << "Seu resultado é: " << result << endl;
+    double x;
+    double stepSize;
+    int derivativeOrder;
+    cout << "Enter the value of x:" << endl;
+    cin >> x;
+
+    cout << "Enter the step size (h):" << endl;
+    cin >> stepSize;
+    if (stepSize <= 0)
+    {
+        cout << "Step size must be positive." << endl;
+        return 1;
+    }
+
+    cout << "Enter the derivative order:" << endl;
+    cin >> derivativeOrder;
+    if (derivativeOrder < 0){
+        cout << "Derivative order must be non-negative." << endl;
+        return 1;
+    }
+
+    cout << "Computing..." << endl;
+    double result;
+    if (derivativeOrder == 0){
+        result = f(x);
+    }else{
+        switch(method)
+        {
+            case 0: 
+                result = forwardDifference(x, stepSize, derivativeOrder);
+                break;
+            case 1: 
+                result = backwardDifference(x, stepSize, derivativeOrder);
+                break;
+            case 2:
+                result = centralDifference(x, stepSize, derivativeOrder);
+                break;
+        }
+    }
+    cout << "The result is: " << result << endl;
     return 0;
 }
