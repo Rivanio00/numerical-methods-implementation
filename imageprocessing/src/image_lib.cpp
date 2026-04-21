@@ -1,19 +1,12 @@
+#include "image_lib.h"
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <string>
 #include <stdexcept>
 #include <algorithm>
-#include <sstream>
 
 using namespace std;
-
-struct Image {
-    int width  = 0;
-    int height = 0;
-    int maxVal = 255;
-    vector<vector<vector<int>>> pixels;
-};
 
 static void skipWhitespaceAndComments(istream& in)
 {
@@ -21,7 +14,7 @@ static void skipWhitespaceAndComments(istream& in)
         char c = static_cast<char>(in.peek());
         if (c == '#') {
             string line;
-            getline(in, line);   // discard comment
+            getline(in, line);
         } else if (isspace(static_cast<unsigned char>(c))) {
             in.get();
         } else {
@@ -83,17 +76,25 @@ void writePPM(const string& filename, const Image& img)
         throw runtime_error("Cannot open output file: " + filename);
     }
  
+    int outMaxVal = img.maxVal;
+    int multiplier = 1;
+    
+    if (img.maxVal == 1) {
+        outMaxVal = 255;
+        multiplier = 255;
+    }
+
     file << "P3\n"
          << img.width << ' ' << img.height << '\n'
-         << img.maxVal << '\n';
+         << outMaxVal << '\n';
  
     const int tripletsPerLine = 5;
     int count = 0;
     for (int row = 0; row < img.height; ++row) {
         for (int col = 0; col < img.width; ++col) {
-            file << img.pixels[row][col][0] << ' '
-                 << img.pixels[row][col][1] << ' '
-                 << img.pixels[row][col][2];
+            file << (img.pixels[row][col][0] * multiplier) << ' '
+                 << (img.pixels[row][col][1] * multiplier) << ' '
+                 << (img.pixels[row][col][2] * multiplier);
             ++count;
             if (count % tripletsPerLine == 0)
                 file << '\n';
@@ -108,22 +109,15 @@ void writePPM(const string& filename, const Image& img)
     cout << "[write] " << filename << '\n';
 }
 
-inline int clampedPixel(const Image& img, int row, int col, int ch)
-{
-    row = max(0, min(row, img.height - 1));
-    col = max(0, min(col, img.width  - 1));
-    return img.pixels[row][col][ch];
-}
-
-static const int KERNEL[3][3] = {
-    {1, 2, 1},
-    {2, 4, 2},
-    {1, 2, 1}
-};
-static const int KERNEL_SUM = 16;
- 
 Image applyGaussianBlur(const Image& src)
 {
+    static const int KERNEL[3][3] = {
+        {1, 2, 1},
+        {2, 4, 2},
+        {1, 2, 1}
+    };
+    static const int KERNEL_SUM = 16;
+
     Image dst;
     dst.width  = src.width;
     dst.height = src.height;
@@ -138,7 +132,6 @@ Image applyGaussianBlur(const Image& src)
             for (int ch = 0; ch < 3; ++ch) {
  
                 int acc = 0;
-                // Convolve with 3×3 kernel
                 for (int ki = -1; ki <= 1; ++ki) {
                     for (int kj = -1; kj <= 1; ++kj) {
                         int weight = KERNEL[ki + 1][kj + 1];
@@ -146,10 +139,8 @@ Image applyGaussianBlur(const Image& src)
                     }
                 }
  
-                // Normalise and clamp to valid range
                 int value = acc / KERNEL_SUM;
-                dst.pixels[row][col][ch] =
-                    max(0, min(value, src.maxVal));
+                dst.pixels[row][col][ch] = max(0, min(value, src.maxVal));
             }
         }
     }
@@ -157,21 +148,79 @@ Image applyGaussianBlur(const Image& src)
     return dst;
 }
 
-int main()
+std::pair<Image, Image> applySobelFilter(const Image& src)
 {
-    const string inputFile  = "input.ppm";
-    const string outputFile = "output.ppm";
+    static const int KERNEL_X[3][3] = {
+        {-1, 0, 1},
+        {-2, 0, 2},
+        {-1, 0, 1}
+    };
+    static const int KERNEL_Y[3][3] = {
+        {-1, -2, -1},
+        {0, 0, 0},
+        {1, 2, 1}
+    };
  
-    try {
-        Image src = readPPM(inputFile);
-        Image dst = applyGaussianBlur(src);
-        writePPM(outputFile, dst);
-        cout << "[done]  Gaussian blur applied successfully.\n";
-    }
-    catch (const exception& ex) {
-        cerr << "[error] " << ex.what() << '\n';
-        return 1;
+    Image dst_h, dst_v;
+    dst_h.width = dst_v.width = src.width;
+    dst_h.height = dst_v.height = src.height;
+    dst_h.maxVal = dst_v.maxVal = src.maxVal;
+ 
+    dst_h.pixels.assign(dst_h.height, vector<vector<int>>(dst_h.width, vector<int>(3, 0)));
+    dst_v.pixels.assign(dst_v.height, vector<vector<int>>(dst_v.width, vector<int>(3, 0)));
+ 
+    for (int row = 0; row < src.height; ++row) {
+        for (int col = 0; col < src.width; ++col) {
+            for (int ch = 0; ch < 3; ++ch) {
+                int acc_x = 0;
+                int acc_y = 0;
+                for (int ki = -1; ki <= 1; ++ki) {
+                    for (int kj = -1; kj <= 1; ++kj) {
+                        int p = clampedPixel(src, row + ki, col + kj, ch);
+                        acc_x += KERNEL_X[ki + 1][kj + 1] * p;
+                        acc_y += KERNEL_Y[ki + 1][kj + 1] * p;
+                    }
+                }
+                dst_h.pixels[row][col][ch] = acc_x;
+                dst_v.pixels[row][col][ch] = acc_y;
+            }
+        }
     }
  
-    return 0;
+    return std::make_pair(dst_h, dst_v);
+}
+
+Image applyLaplaceFilter(const Image& src)
+{
+    static const int KERNEL[3][3] = {
+        {0, -1, 0},
+        {-1, 4, -1},
+        {0, -1, 0}
+    };
+
+    Image dst;
+    dst.width  = src.width;
+    dst.height = src.height;
+    dst.maxVal = src.maxVal;
+
+    dst.pixels.assign(dst.height,
+        vector<vector<int>>(dst.width,
+            vector<int>(3, 0)));
+ 
+    for (int row = 0; row < src.height; ++row) {
+        for (int col = 0; col < src.width; ++col) {
+            for (int ch = 0; ch < 3; ++ch) {
+                int acc = 0;
+                for (int ki = -1; ki <= 1; ++ki) {
+                    for (int kj = -1; kj <= 1; ++kj) {
+                        int weight = KERNEL[ki + 1][kj + 1];
+                        acc += weight * clampedPixel(src, row + ki, col + kj, ch);
+                    }
+                }
+                dst.pixels[row][col][ch] = acc;
+            }
+        }
+    }
+
+    return dst;
 }
