@@ -82,7 +82,7 @@ double convergeInverse(int n, double* M)
     double eigenvalue_old = 0.0;
     double eigenvalue_new = 0.0;
 
-    // U começa como cópia de M
+    // U <- M
     double U[n*n];
     for (int i = 0; i < n; i++){
         for (int j = 0; j < n; j++){
