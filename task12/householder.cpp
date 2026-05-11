@@ -30,7 +30,7 @@ void subHouseHolder(double* H, double* A, int step, int n){
     double v[n];
     for (int i = 0; i < n; i++) v[i] = 0.0;
 
-    // v(step+1 : n) <- coluna step de A, da linha step+1 até n
+    // v(step+1 : n) <- column step of A, from row step+1 to n
     for (int i = step+1; i < n; i++){
         v[i] = A[i*n + step];
     }
@@ -40,14 +40,14 @@ void subHouseHolder(double* H, double* A, int step, int n){
     for (int i = step+1; i < n; i++) norma += v[i] * v[i];
     norma = sqrt(norma);
 
-    // v_linha = zeros(n); v_linha(step+1) = norma
-    double v_linha[n];
-    for (int i = 0; i < n; i++) v_linha[i] = 0.0;
-    v_linha[step+1] = norma;
+    // v_line = zero(n); v_line(step+1) = norma
+    double v_line[n];
+    for (int i = 0; i < n; i++) v_line[i] = 0.0;
+    v_line[step+1] = norma;
 
-    // w = v - v_linha
+    // w = v - v_line
     double w[n];
-    for (int i = 0; i < n; i++) w[i] = v[i] - v_linha[i];
+    for (int i = 0; i < n; i++) w[i] = v[i] - v_line[i];
 
     // u = w / ||w||
     double u[n];
@@ -130,7 +130,7 @@ void converge(int n, double* M, double* result)
     cout << "Final Error: " << error << endl;
     cout << "Final vector: " << endl << "|";
     for (int i = 0; i < n; i++) cout << v_old[i] << "|";
-    cout << endl << "==========================" << endl;
+    cout << endl << "==========================" << endl << endl;
     for (int i = 0; i < n; i++) result[i] = v_old[i];
 }
 
@@ -176,7 +176,6 @@ void decompLU(int n, double* L, double* U){
 }
 
 
-// method
 void houseHolderMethod(int n, double* A, double* A_final, double* H_out)
 {
     // Ai <- A
@@ -286,8 +285,8 @@ double convergeInverse(int n, double* M, double* eigenvector)
     // ← único acréscimo
     for (int i = 0; i < n; i++) eigenvector[i] = v_old[i];
 
-    cout << "Final Eigenvalue: " << eigenvalue_final << endl;
-    cout << "Final Error: " << error << endl;
+    // cout << endl << "Final Eigenvalue: " << eigenvalue_final << endl;
+    // cout << "Final Error: " << error << endl;
     return eigenvalue_final;
 }
 
@@ -298,9 +297,11 @@ double convergeShifted(int n, double* M, double mu, double* eigenvector)
         for (int j = 0; j < n; j++)
             A_shifted[i*n + j] = M[i*n + j] - (i == j ? mu : 0.0);
 
-    // chama convergeInverse e pega o autovetor
+    // call convergeInverse and get the eigenvector
     double lambda = convergeInverse(n, A_shifted, eigenvector);
-    return lambda + mu;
+    double result = lambda + mu;
+    cout << "Shifted eigenvalue (mu=" << mu << "): " << result << endl;
+    return result;
 }
 
 int main()
@@ -319,24 +320,26 @@ int main()
     double H[n*n];
     houseHolderMethod(n, (double*)A, A_final, H);
 
-    // autovalores dominante de A#
+    // dominant eigenvalues ​​of A#
     double v[n];
     converge(n, A_final, v);
 
-    // demais autovalores via shifted — inspecionar diagonal de A_final pra escolher mus
-    double mus[n];
-    for (int i = 0; i < n; i++) mus[i] = A_final[i*n + i] * 0.95;
+    // other eigenvalues ​​via shifted — inspect diagonal of A_final to choose mu's
+    double mus[] = {A_final[0], A_final[2*n+2], A_final[3*n+3], A_final[4*n+4]};
 
-    for (int k = 0; k < 4; k++){
+    for (int k = 0; k < n; k++){
         double v_shifted[n];
         convergeShifted(n, A_final, mus[k], v_shifted);
 
-        // autovetor de A original
+        // inital A - eigenvector
         double x[n];
         matVec(n, H, v_shifted, x);
+        cout << "Autovetor de A" << endl << "|";
+        for (int i = 0; i < n; i++) cout << x[i] << "|";
+        cout << endl << endl;
     }
 
-    // Incial A eigenvalues
+    // initial A eigenvalues
     converge(n, (double*)A, v);
 
     return 0;
