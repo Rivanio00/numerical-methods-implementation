@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cmath>
 #include <iomanip>
+#include <fstream>
 
 using namespace std;
 
@@ -285,15 +286,35 @@ void qrMethod(int n, double* A, double* A_new, double* P, double* lamb)
 
 int main()
 {
-    int n = 5;
-    double A[5][5] = {
-        {40, 8, 4, 2, 1},
-        {8, 30, 12, 6, 2},
-        {4, 12, 20, 1, 2},
-        {2, 6, 1, 25, 4},
-        {1, 2, 2, 4, 5}
+    // ---------------------------------------------------------
+    // REDIRECIONAMENTO DE SAÍDA PARA ARQUIVO
+    // ---------------------------------------------------------
+    ofstream arquivo_saida("resultados_ap2.txt");
+    if (!arquivo_saida.is_open()) {
+        cerr << "Erro ao abrir o arquivo para escrita!" << endl;
+        return 1;
+    }
+    streambuf *coutbuf = cout.rdbuf(); 
+    cout.rdbuf(arquivo_saida.rdbuf()); 
+    // A partir daqui, todo 'cout' vai para o arquivo de texto
+    // ---------------------------------------------------------
+
+    int n = 10;
+    // Matriz M (A) preenchida com os dígitos da matrícula
+    double A[10][10] = {
+        {15,  6,  9,  3,  3,  6,  1,  2,  3,  4},
+        { 6, 17,  3,  3,  6,  6,  2,  3,  4,  5},
+        { 9,  3, 22,  6,  6,  6,  3,  4,  5,  6},
+        { 3,  3,  6, 18,  6,  9,  4,  5,  6,  7},
+        { 3,  6,  6,  6, 20,  3,  5,  6,  7,  8},
+        { 6,  6,  6,  9,  3, 25,  6,  7,  8,  9},
+        { 1,  2,  3,  4,  5,  6, 27,  6,  9,  3},
+        { 2,  3,  4,  5,  6,  7,  6, 29,  3,  6},
+        { 3,  4,  5,  6,  7,  8,  9,  3, 34,  6},
+        { 4,  5,  6,  7,  8,  9,  3,  6,  6, 30}
     };
-    cout << scientific << setprecision(10);
+    
+    cout << scientific << setprecision(6);
 
     double A_householder[n*n];
     double H[n*n];
@@ -301,14 +322,15 @@ int main()
 
     for(int i=0;i<n;i++)
         H[i*n+i]=1;
+        
     houseHolderMethod(n, (double*)A, A_householder, H);
 
-    double A_final[n*n] = {}; // matriz digonal final
-    double P[n*n] = {}; // P = Q1*Q2*...
-    double lamb[n]; // autovalores de A
+    double A_final[n*n] = {}; 
+    double P[n*n] = {}; 
+    double lamb[n]; 
     qrMethod(n, A_householder, A_final, P, lamb);
 
-    cout << "QR Matrix Final = " << endl;
+    cout << endl << "QR Matrix Final (Diagonal) = " << endl;
     for (int i = 0; i < n; i++){
         cout << "|";
         for (int j = 0; j < n; j++){
@@ -318,22 +340,21 @@ int main()
     }
     cout << endl << endl;
 
-    cout << "A eigenvalues = " << endl;
+    cout << "A eigenvalues (from array) = " << endl;
     cout << "|";
     for (int i = 0; i < n; i++){
         cout << lamb[i] << "|";
     }
     cout << endl;
 
-
-    cout << endl << "A eigenvalues = " << endl;
+    cout << endl << "A eigenvalues (from diagonal) = " << endl;
     cout << "|";
     for (int i = 0; i < n; i++){
         cout << A_final[i*n+i] << "|";
     }
     cout << endl;
 
-    cout << endl << "Eigenvectors of tridiagonal matrix = " << endl;
+    cout << endl << "Eigenvectors of tridiagonal matrix (V_QR) = " << endl;
     for (int i = 0; i < n; i++){
         cout << "|";
         for (int j = 0; j < n; j++){
@@ -344,7 +365,7 @@ int main()
 
     double HP[n*n];
     multiMatrix(n, H, P, HP);
-    cout << endl << "Matrix H * P = " << endl;
+    cout << endl << "Matrix H * P (Final Eigenvectors V_M) = " << endl;
     for (int i = 0; i < n; i++){
         cout << "|";
         for (int j = 0; j < n; j++){
@@ -354,6 +375,10 @@ int main()
     }
     cout << endl;
 
+    cout.rdbuf(coutbuf); 
+    arquivo_saida.close();
+    
+    cout << "Execucao concluida! Abra o arquivo 'resultados_ap2.txt' na mesma pasta para ver as matrizes." << endl;
 
     return 0;
 }
